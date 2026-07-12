@@ -91,7 +91,7 @@ services:
     # introduced.  Cloudflare reaches api:8000 over the private Compose net.
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()"]
       interval: 5s
       timeout: 3s
       retries: 30

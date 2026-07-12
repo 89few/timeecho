@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from secrets import token_urlsafe
 from datetime import timedelta
 from pathlib import Path
 
@@ -85,7 +86,10 @@ async def seed() -> None:
                 user = User(
                     email=email,
                     username=name,
-                    password_hash=hash_password("Echo2026"),
+                    # Seeded community profiles are display-only. A random,
+                    # unrecoverable credential prevents anyone from logging in
+                    # with a password published in the source tree.
+                    password_hash=hash_password(token_urlsafe(32)),
                     email_verified=True,
                     avatar_url=f"/static/assets/avatars/avatar-{((index - 1) % 6) + 1}.png",
                     bio=bio,

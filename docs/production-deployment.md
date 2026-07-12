@@ -28,3 +28,5 @@ curl --fail https://PUBLIC_HOST/health
 ```
 
 Cloudflare Quick Tunnel is suitable for temporary acceptance testing, but its hostname can change whenever the tunnel process is recreated. A stable APK endpoint requires a Named Tunnel with a controlled hostname, or another stable HTTPS reverse proxy. No application code can make a changing Quick Tunnel hostname permanent.
+
+For acceptance deployments without a domain, `deploy/update-quick-tunnel-endpoint.sh` can publish the current URL to a credential-free public JSON repository. Build the client with `API_DISCOVERY_URL` pointing at that JSON. Keep the repository deploy key only on the server and grant it access solely to the endpoint repository.

@@ -1,0 +1,18 @@
+[Unit]
+Description=Publish the current TimeEcho Quick Tunnel endpoint
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/timeecho
+Environment=COMPOSE_DIRECTORY=/opt/timeecho/backend
+Environment=ENDPOINT_DIRECTORY=/opt/timeecho/endpoint/repository
+Environment=ENDPOINT_DEPLOY_KEY=/opt/timeecho/endpoint/deploy_key
+Environment=ENDPOINT_REPOSITORY=ssh://git@ssh.github.com:443/OWNER/timeecho-endpoint.git
+ExecStart=/opt/timeecho/deploy/update-quick-tunnel-endpoint.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,153 @@
+﻿x-app-environment: &app-environment
+  APP_ENV: ${APP_ENV:-dev}
+  # Do not inherit the host's generic DEBUG variable (it is often non-boolean).
+  TIMEECHO_DEBUG: "false"
+  DATABASE_URL: postgresql+asyncpg://timeecho:timeecho@postgres:5432/timeecho
+  REDIS_URL: redis://redis:6379/0
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-dev-jwt-secret-change-in-production}
+  SERVER_SALT: ${SERVER_SALT:-local-dev-server-salt}
+  ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-local-dev-encryption-secret-at-least-32-chars}
+  DEV_SMS_CODE: ${DEV_SMS_CODE:-123456}
+  PHONE_AUTO_REGISTRATION_ENABLED: ${PHONE_AUTO_REGISTRATION_ENABLED:-false}
+  EMAIL_VERIFICATION_REQUIRED: ${EMAIL_VERIFICATION_REQUIRED:-false}
+  EMAIL_ALLOW_UNVERIFIED_REGISTRATION: ${EMAIL_ALLOW_UNVERIFIED_REGISTRATION:-true}
+  EMAIL_DEV_CODE_ENABLED: ${EMAIL_DEV_CODE_ENABLED:-true}
+  DEV_EMAIL_CODE: ${DEV_EMAIL_CODE:-123456}
+  EMAIL_CODE_EXPIRE_MINUTES: ${EMAIL_CODE_EXPIRE_MINUTES:-10}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-TimeEcho}
+  SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+  SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+  RATE_LIMITS_ENABLED: ${RATE_LIMITS_ENABLED:-false}
+  COMMUNITY_SIMULATION_ENABLED: ${COMMUNITY_SIMULATION_ENABLED:-true}
+  COMMUNITY_SIMULATION_MIN_SECONDS: ${COMMUNITY_SIMULATION_MIN_SECONDS:-150}
+  COMMUNITY_SIMULATION_MAX_SECONDS: ${COMMUNITY_SIMULATION_MAX_SECONDS:-420}
+
+x-app-service: &app-service
+  build:
+    context: .
+  environment: *app-environment
+  restart: unless-stopped
+  volumes:
+    - uploads_data:/app/app/static/uploads
+    - private_media_data:/app/private_uploads
+
+x-app-depends: &app-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  migrate:
+    condition: service_completed_successfully
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: timeecho
+      POSTGRES_PASSWORD: timeecho
+      POSTGRES_DB: timeecho
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timeecho -d timeecho"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    <<: *app-service
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
+
+  api:
+    <<: *app-service
+    depends_on: *app-depends
+    ports:
+      - "127.0.0.1:8000:8000"
+    # ConnectionManager is process-local, so the supported topology is one
+    # API container with exactly one Uvicorn worker until Redis Pub/Sub is
+    # introduced.  Cloudflare reaches api:8000 over the private Compose net.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  worker-release:
+    <<: *app-service
+    depends_on: *app-depends
+    command: python -m app.workers.release_letter_worker
+
+  worker-cleanup:
+    <<: *app-service
+    depends_on: *app-depends
+    command: python -m app.workers.cleanup_worker
+
+  worker-dormant:
+    <<: *app-service
+    depends_on: *app-depends
+    command: python -m app.workers.dormant_user_worker
+
+  worker-community:
+    <<: *app-service
+    depends_on: *app-depends
+    command: python -m app.workers.community_worker
+
+  seed-demo:
+    <<: *app-service
+    profiles: ["tools"]
+    restart: "no"
+    depends_on: *app-depends
+    command: python scripts/seed_demo_data.py --users 1000 --letters-per-user 3
+
+  # Temporary public HTTPS URL for development. The URL changes after restart.
+  tunnel-quick:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel-quick"]
+    depends_on:
+      api:
+        condition: service_healthy
+    command: tunnel --no-autoupdate --protocol http2 --url http://api:8000
+    restart: unless-stopped
+
+  # Stable production tunnel. Create it in Cloudflare, then put its token in
+  # TUNNEL_TOKEN in .env and configure the public hostname to http://api:8000.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    command: tunnel --no-autoupdate run
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:
+  private_media_data:

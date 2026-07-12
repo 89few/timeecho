@@ -1,0 +1,43 @@
+x-production-environment: &production-environment
+  APP_ENV: prod
+  TIMEECHO_DEBUG: "false"
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+  SERVER_SALT: ${SERVER_SALT:?SERVER_SALT is required}
+  ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:?ENCRYPTION_SECRET is required}
+  DATABASE_URL: ${DATABASE_URL:?production DATABASE_URL is required}
+  REDIS_URL: ${REDIS_URL:?production REDIS_URL is required}
+  DEV_SMS_CODE: ""
+  PHONE_AUTO_REGISTRATION_ENABLED: "false"
+  EMAIL_DEV_CODE_ENABLED: "false"
+  DEV_EMAIL_CODE: ""
+  EMAIL_VERIFICATION_REQUIRED: "true"
+  EMAIL_ALLOW_UNVERIFIED_REGISTRATION: "false"
+  COMMUNITY_SIMULATION_ENABLED: "false"
+  RATE_LIMITS_ENABLED: "true"
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+  redis:
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+  migrate:
+    environment: *production-environment
+  api:
+    environment: *production-environment
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+  worker-release:
+    environment: *production-environment
+  worker-cleanup:
+    environment: *production-environment
+  worker-dormant:
+    environment: *production-environment
+  worker-community:
+    profiles: ["development-only"]
+    environment: *production-environment

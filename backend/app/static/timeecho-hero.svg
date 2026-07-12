@@ -1,0 +1,16 @@
+<svg width="760" height="640" viewBox="0 0 760 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="760" height="640" rx="34" fill="url(#bg)"/>
+  <g opacity=".22" stroke="#fff"><path d="M60 496c140-78 255-88 391-35 89 34 161 20 240-39"/><path d="M92 148c108 52 200 58 318 12 88-35 166-23 252 39"/></g>
+  <circle cx="382" cy="330" r="166" fill="url(#orb)" opacity=".56"/>
+  <path d="M380 154c52 78 80 161 80 249 0 46-36 83-80 83s-80-37-80-83c0-88 28-171 80-249Z" fill="#172554" stroke="#7DD3FC" stroke-width="6"/>
+  <path d="M382 213c-34 62-52 124-52 190 0 29 22 53 50 53s50-24 50-53c0-66-17-128-48-190Z" fill="url(#tree)"/>
+  <path d="M382 248v184M332 336c41 4 68-20 86-67M426 360c-32-4-58-22-78-54" stroke="#FDE68A" stroke-width="9" stroke-linecap="round"/>
+  <path d="M101 310l203-92-72 168-35-72-96-4Z" fill="#ECFEFF" stroke="#7DD3FC" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M304 218 197 314" stroke="#94A3B8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M575 178l78 36-88 32 24-34-14-34Z" fill="#FDE68A" stroke="#C4B5FD" stroke-width="4" stroke-linejoin="round"/>
+  <g fill="#C4B5FD"><circle cx="165" cy="150" r="5"/><circle cx="644" cy="404" r="6"/><circle cx="556" cy="510" r="4"/><circle cx="250" cy="510" r="6"/></g>
+  <rect x="498" y="408" width="144" height="68" rx="18" fill="rgba(15,23,42,.7)" stroke="#7DD3FC"/>
+  <text x="526" y="437" fill="#ECFEFF" font-family="Inter,Arial" font-size="18" font-weight="700">24h 临时会话</text>
+  <text x="526" y="462" fill="#BAE6FD" font-family="Inter,Arial" font-size="14">exit → destroy</text>
+  <defs><linearGradient id="bg" x1="0" x2="760" y1="0" y2="640"><stop stop-color="#172554"/><stop offset=".62" stop-color="#1E1B4B"/><stop offset="1" stop-color="#0F172A"/></linearGradient><radialGradient id="orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 330) rotate(90) scale(166)"><stop stop-color="#7DD3FC"/><stop offset=".7" stop-color="#C4B5FD" stop-opacity=".35"/><stop offset="1" stop-color="#7DD3FC" stop-opacity="0"/></radialGradient><linearGradient id="tree" x1="330" x2="430" y1="213" y2="456"><stop stop-color="#7DD3FC"/><stop offset="1" stop-color="#C4B5FD"/></linearGradient></defs>
+</svg>

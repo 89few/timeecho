@@ -1,0 +1,61 @@
+# Secrets and deployment state
+.env
+**/.env
+!.env.example
+**/.env.*
+!**/.env.example
+.local-secrets/
+current-public-url.txt
+
+# Runtime data and private uploads
+*.db
+*.sqlite
+*.sqlite3
+*.log
+backend/private_uploads/*
+!backend/private_uploads/.gitkeep
+backend/app/static/uploads/*
+!backend/app/static/uploads/.gitkeep
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+*.py[cod]
+
+# Flutter / Android machine state and build output
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+
+# Local tooling, archives, screenshots and generated reports
+.tools/
+*.zip
+*.7z
+*.tar
+*.gz
+*.xml
+admin-rendered.html
+docs/screenshots/
+docs/DELIVERY-*.md
+salvaged-*.png
+pubmenu-*.png
+remarkdone-*.png
+settings-*.png
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

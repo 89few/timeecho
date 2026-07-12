@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>TimeEcho 运营管理中心</title>
+  <link rel="stylesheet" href="/static/webapp.css">
+</head>
+<body class="admin-page">
+  <section id="adminLogin" class="admin-login">
+    <div class="login-brand">
+      <img src="/static/assets/timeecho-app-icon.png" alt="">
+      <div><strong>TimeEcho</strong><span>运营管理中心</span></div>
+    </div>
+    <div class="login-panel">
+      <p class="eyebrow">ADMIN CONSOLE</p>
+      <h1>管理员登录</h1>
+      <label for="adminUser">账号</label>
+      <input id="adminUser" autocomplete="username" placeholder="管理员账号">
+      <label for="adminPass">密码</label>
+      <input id="adminPass" type="password" autocomplete="current-password" placeholder="登录密码">
+      <button id="adminLoginBtn" class="primary login-submit">登录</button>
+      <div id="adminLoginMsg"></div>
+    </div>
+  </section>
+  <section id="adminWork" class="admin-app hidden">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <img src="/static/assets/timeecho-app-icon.png" alt="">
+        <div><strong>TimeEcho</strong><span>运营管理中心</span></div>
+      </div>
+      <nav class="admin-nav" id="adminNav">
+        <p>工作台</p>
+        <button data-tab="dashboard" class="active"><span>⌂</span>数据概览</button>
+        <p>用户与关系</p>
+        <button data-tab="users"><span>♙</span>用户管理</button>
+        <button data-tab="friends"><span>♧</span>好友关系</button>
+        <p>内容与安全</p>
+        <button data-tab="posts"><span>▤</span>动态管理</button>
+        <button data-tab="comments"><span>◫</span>评论管理</button>
+        <button data-tab="reviews"><span>✈</span>纸飞机审核</button>
+        <button data-tab="complaints"><span>⚑</span>举报中心</button>
+        <button data-tab="words"><span>⌁</span>敏感词库</button>
+        <p>系统</p>
+        <button data-tab="configs"><span>⚙</span>运行配置</button>
+        <button data-tab="maintenance"><span>↻</span>维护任务</button>
+      </nav>
+      <div class="sidebar-foot"><span class="status-dot"></span>服务运行中<button id="adminLogout">退出</button></div>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div><p class="eyebrow">TIMEECHO CONSOLE</p><h1 id="adminPageTitle">数据概览</h1></div>
+        <div class="admin-top-actions"><span class="env-chip">运营后台</span><button class="icon-button" onclick="render()" title="刷新">↻</button></div>
+      </header>
+      <div id="adminContent" class="admin-content"></div>
+    </main>
+  </section>
+  <dialog id="adminDialog" class="admin-dialog"></dialog>
+  <div id="adminToast" class="admin-toast"></div>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

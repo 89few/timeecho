@@ -1,8 +1,6 @@
 # TimeEcho
 
-TimeEcho 是一个面向匿名社交场景的全栈工程示例，采用 Flutter 客户端、FastAPI 异步 API、PostgreSQL、Redis、WebSocket 与 Docker Compose。仓库重点展示关系级匿名身份、并发匹配、实时消息、媒体权限、后台治理和生产部署等工程实现。
-
-> 当前仓库保持私有，检查完成后可由仓库所有者切换为 Public。仓库不包含生产 `.env`、数据库、用户上传、部署密钥、签名密钥或 APK。
+TimeEcho 是一个面向匿名社交场景的全栈工程示例，采用 Flutter 客户端、FastAPI 异步 API、PostgreSQL、Redis、WebSocket 与 Docker Compose。
 
 ## 系统架构
 
@@ -158,12 +156,6 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi `
 ```
 
 仓库中的 Android 配置可直接构建；`mobile/android/local.properties` 属于机器文件，不提交。正式发布前需配置并安全保存自己的 release keystore。
-
-## 已知限制
-
-- WebSocket 连接表仍在 API 进程内存中，当前生产拓扑限制为一个 API 容器、一个 Uvicorn Worker；横向扩展需要 Redis Pub/Sub。
-- APP 被系统彻底终止后的远程通知需要 FCM 或手机厂商推送服务。
-- Cloudflare Quick Tunnel 地址会变化；当前客户端通过外部端点发现文件获取最新地址。正式发布建议改用 Named Tunnel 和自有域名。
 
 ## License
 

@@ -20,6 +20,8 @@ async def test_admin_login_shell_is_available(client):
     assert response.status_code == 200
     assert 'class="login-shell"' in response.text
     assert "管理员登录" in response.text
+    assert "webapp.css?v=20260713-2" in response.text
+    assert response.headers["cache-control"] == "no-store, max-age=0"
 
 
 def test_admin_script_does_not_reload_on_unauthenticated_probe():

@@ -93,6 +93,8 @@ async def media_cache_headers(request, call_next):
     if request.url.path == "/admin" or request.url.path.endswith("/admin.js"):
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
         response.headers["X-Frame-Options"] = "DENY"
+    if request.url.path in {"/admin", "/static/admin.js", "/static/webapp.css"}:
+        response.headers["Cache-Control"] = "no-store, max-age=0"
     if request.url.path.startswith("/static/uploads/") or request.url.path.startswith("/static/assets/avatars/"):
         response.headers["Cache-Control"] = "public, max-age=604800, immutable"
     return response

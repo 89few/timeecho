@@ -85,6 +85,13 @@ async def test_verified_registration_and_duplicate_constraints(client, monkeypat
     assert duplicate_email.status_code == 409
     assert duplicate_email.json()["error_code"] == "EMAIL_ALREADY_REGISTERED"
 
+    duplicate_code = await client.post(
+        "/api/auth/email/send-code",
+        json={"email": "verified@example.com", "purpose": "register"},
+    )
+    assert duplicate_code.status_code == 409
+    assert duplicate_code.json()["error_code"] == "EMAIL_ALREADY_REGISTERED"
+
 
 @pytest.mark.asyncio
 async def test_password_policy_and_unique_username(client):
@@ -151,6 +158,20 @@ async def test_forgot_and_reset_password(client):
     )
     assert new_login.status_code == 200, new_login.text
 
+    unknown_forgot = await client.post(
+        "/api/auth/password/forgot",
+        json={"email": "not-registered@example.com"},
+    )
+    assert unknown_forgot.status_code == 404
+    assert unknown_forgot.json()["error_code"] == "ACCOUNT_NOT_FOUND"
+
+    unknown_reset_code = await client.post(
+        "/api/auth/email/send-code",
+        json={"email": "not-registered@example.com", "purpose": "reset"},
+    )
+    assert unknown_reset_code.status_code == 404
+    assert unknown_reset_code.json()["error_code"] == "ACCOUNT_NOT_FOUND"
+
 
 @pytest.mark.asyncio
 async def test_email_delivery_requires_smtp_outside_development(client, monkeypatch):
@@ -159,9 +180,14 @@ async def test_email_delivery_requires_smtp_outside_development(client, monkeypa
     monkeypatch.setattr(settings, "smtp_host", None)
     monkeypatch.setattr(settings, "smtp_from_email", None)
 
+    created = await client.post(
+        "/api/auth/email/register",
+        json={"email": "someone@example.com", "password": "Secure123"},
+    )
+    assert created.status_code == 200, created.text
     response = await client.post(
         "/api/auth/email/send-code",
-        json={"email": "someone@example.com", "purpose": "register"},
+        json={"email": "someone@example.com", "purpose": "reset"},
     )
     assert response.status_code == 503
     assert response.json()["error_code"] == "EMAIL_NOT_CONFIGURED"

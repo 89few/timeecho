@@ -2,8 +2,6 @@
 
 TimeEcho 是一个面向匿名社交场景的全栈工程示例，采用 Flutter 客户端、FastAPI 异步 API、PostgreSQL、Redis、WebSocket 与 Docker Compose。仓库重点展示关系级匿名身份、并发匹配、实时消息、媒体权限、后台治理和生产部署等工程实现。
 
-> 仓库公开的是源代码与工程文档，不包含生产 `.env`、数据库、用户上传、部署密钥或签名密钥。APK 作为 GitHub Release 资产单独分发。
-
 ## Android APK
 
 [下载最新版 arm64 APK](https://github.com/89few/timeecho/releases/latest/download/TimeEcho-v1.5.0-arm64-release.apk)
@@ -38,7 +36,6 @@ FastAPI (single Uvicorn worker)
        └─ optional community interaction
 ```
 
-生产 Compose 将 PostgreSQL、Redis 和 API 宿主端口绑定到 `127.0.0.1`；公网流量只通过 HTTPS Tunnel 进入。上传文件和数据库使用独立持久化 Volume。
 
 ## 技术栈
 
@@ -68,7 +65,6 @@ backend/app/
 └─ static/       管理后台静态资源
 ```
 
-API 路由不信任客户端传入的 `user_id`，身份与资源权限均从当前 JWT 或管理员会话解析。业务规则集中在 services 层，使 HTTP 与 WebSocket 消息发送复用同一套权限和幂等逻辑。
 
 ## 关键工程设计
 
@@ -169,11 +165,6 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi `
 
 仓库中的 Android 配置可直接构建；`mobile/android/local.properties` 属于机器文件，不提交。正式发布前需配置并安全保存自己的 release keystore。
 
-## 已知限制
-
-- WebSocket 连接表仍在 API 进程内存中，当前生产拓扑限制为一个 API 容器、一个 Uvicorn Worker；横向扩展需要 Redis Pub/Sub。
-- APP 被系统彻底终止后的远程通知需要 FCM 或手机厂商推送服务。
-- Cloudflare Quick Tunnel 地址会变化；当前客户端通过外部端点发现文件获取最新地址。正式发布建议改用 Named Tunnel 和自有域名。
 
 ## License
 

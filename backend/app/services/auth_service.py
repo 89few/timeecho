@@ -317,10 +317,12 @@ async def login_with_password(db: AsyncSession, redis: Redis, identifier: str, p
 
 
 async def request_password_reset(db: AsyncSession, redis: Redis, email: str) -> str | None:
-    """Request a reset without revealing whether the address is registered."""
+    """Send a reset code only after confirming that the address is registered."""
     normalized = normalize_email(email)
     user_exists = await db.scalar(select(User.id).where(func.lower(User.email) == normalized))
-    return await send_email_code(redis, normalized, "reset", deliver=bool(user_exists))
+    if not user_exists:
+        raise AppException("ACCOUNT_NOT_FOUND", "该邮箱尚未注册", 404)
+    return await send_email_code(redis, normalized, "reset", deliver=True)
 
 
 async def reset_password(db: AsyncSession, redis: Redis, email: str, code: str, new_password: str) -> None:

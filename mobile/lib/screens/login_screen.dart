@@ -16,6 +16,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const _enableDevPhoneLogin = bool.fromEnvironment(
+    'ENABLE_DEV_PHONE_LOGIN',
+    defaultValue: false,
+  );
   final _formKey = GlobalKey<FormState>();
   final _identifier = TextEditingController();
   final _password = TextEditingController();
@@ -264,7 +268,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                ExpansionTile(
+                if (_enableDevPhoneLogin)
+                  ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 8),
                   title: const Text('开发测试账号', style: TextStyle(fontSize: 14)),
                   subtitle: const Text(

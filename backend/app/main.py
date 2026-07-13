@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,7 +113,7 @@ app.include_router(matching.router, prefix=settings.api_prefix)
 
 @app.get("/")
 async def landing():
-    return FileResponse("app/static/index.html")
+    return RedirectResponse(url="/admin", status_code=307)
 
 
 @app.get("/app")

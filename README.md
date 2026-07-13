@@ -1,29 +1,110 @@
 # TimeEcho
 
-TimeEcho 是一套温和、轻量的全栈社交应用：延时纸飞机、在线匿名匹配、好友私信、动态与通知中心。客户端使用 Flutter，后端使用 FastAPI、PostgreSQL、Redis、WebSocket 和 Docker Compose。
+TimeEcho 是一个面向匿名社交场景的全栈工程示例，采用 Flutter 客户端、FastAPI 异步 API、PostgreSQL、Redis、WebSocket 与 Docker Compose。仓库重点展示关系级匿名身份、并发匹配、实时消息、媒体权限、后台治理和生产部署等工程实现。
 
-## 当前功能
+> 当前仓库保持私有，检查完成后可由仓库所有者切换为 Public。仓库不包含生产 `.env`、数据库、用户上传、部署密钥、签名密钥或 APK。
 
-- 邮箱注册、密码登录、限时一次性验证码、忘记密码与密码重置。
-- 每个用户拥有创建后不可修改的唯一 8 位 UID；个人资料、找人和管理端均支持 UID。
-- 个人头像、昵称、简介、好友申请、好友列表、长期私信和公开主页。
-- 好友备注会同步用于好友列表、主页和私信标题；用户主页支持举报与全局拉黑。
-- 动态支持文字、图片、视频、语音、可见范围、点赞、评论和作者删除。
-- 消息页将好友申请、点赞、评论、会话通知与好友私信分组展示，并提供未读红点。
-- 延时纸飞机发送、释放、打捞、回复、举报、结束会话和内容审核。
-- 纸飞机及即时遇见使用房间级匿名身份；交换名片前，接口不会返回真实账号、昵称、头像或主页入口。
-- 即时遇见支持倾诉/倾听/随便聊聊、话题偏好、取消、结束、重新匹配、拉黑和不再匹配。
-- 双方都同意交换名片后才同时展示真实资料；交换成功后仍需单独发送好友申请。
-- 全局拉黑会阻止再次匹配、纸飞机互动、好友申请、动态互动与私信。
-- 消息使用 `client_message_id` 幂等，断线重试不会重复入库。
-- 网页管理端采用桌面运营后台布局，提供 UID 检索、恢复/禁言/封禁、审核待办、用户与关系、内容治理、举报联动处置、敏感词及系统维护。
-- 开发环境可保留 10 个社区账号，并通过延时 Worker 自然地参与公开动态互动。
+## 系统架构
 
-客户端已移除城市采集与展示。
+```text
+Flutter Android
+  ├─ REST / JWT + refresh rotation
+  ├─ one-time WebSocket ticket
+  └─ secure storage / local cache
+            │ HTTPS / WSS
+            ▼
+Cloudflare Tunnel
+            │ Docker private network
+            ▼
+FastAPI (single Uvicorn worker)
+  ├─ API routers ─ services ─ SQLAlchemy async ─ PostgreSQL
+  ├─ WebSocket connection manager
+  ├─ Redis queue / lock / rate limit / ephemeral state
+  ├─ Alembic migrations
+  └─ background workers
+       ├─ delayed-letter release
+       ├─ expired-content cleanup
+       ├─ dormant-account processing
+       └─ optional community interaction
+```
 
-## 启动
+生产 Compose 将 PostgreSQL、Redis 和 API 宿主端口绑定到 `127.0.0.1`；公网流量只通过 HTTPS Tunnel 进入。上传文件和数据库使用独立持久化 Volume。
 
-在根目录双击 `start-backend.cmd`，或者运行：
+## 技术栈
+
+| 层级 | 主要技术 |
+| --- | --- |
+| 移动端 | Flutter 3 / Dart 3、Dio、web_socket_channel、flutter_secure_storage、cached_network_image、image_picker、record、audioplayers、video_player |
+| API | Python 3.12、FastAPI、Pydantic v2、Uvicorn |
+| 数据访问 | SQLAlchemy 2.0 Async、asyncpg、Alembic |
+| 数据与状态 | PostgreSQL 16、Redis 7 |
+| 实时通信 | WebSocket、一次性 Ticket、离线消息缓存、`client_message_id` 幂等 |
+| 安全 | JWT access/refresh、刷新令牌轮换、bcrypt、AES-GCM、HttpOnly 管理员会话、RBAC、审计日志 |
+| 运维 | Docker Compose、Cloudflare Tunnel、健康检查、持久化 Volume、后台 Worker |
+| 测试 | pytest、pytest-asyncio、HTTPX、SQLite 隔离库、Flutter test/analyze |
+
+## 后端分层
+
+```text
+backend/app/
+├─ api/          HTTP 路由、鉴权依赖与输入输出边界
+├─ core/         配置、安全、加密、异常和公共常量
+├─ db/           AsyncSession、Redis 生命周期和数据库基类
+├─ models/       SQLAlchemy 领域模型
+├─ schemas/      Pydantic 请求与响应模型
+├─ services/     匹配、聊天、匿名身份、社交关系与媒体业务逻辑
+├─ websocket/    房间连接管理和实时事件分发
+├─ workers/      延时任务、清理任务及可选社区互动
+└─ static/       管理后台静态资源
+```
+
+API 路由不信任客户端传入的 `user_id`，身份与资源权限均从当前 JWT 或管理员会话解析。业务规则集中在 services 层，使 HTTP 与 WebSocket 消息发送复用同一套权限和幂等逻辑。
+
+## 关键工程设计
+
+### 匿名关系与名片交换
+
+匿名身份绑定到会话关系而非用户全局账号。同一房间身份稳定，不同房间无法据此关联同一用户。交换名片使用双方同意状态和数据库事务；双方都确认前，API 与 WebSocket DTO 不返回真实 UID、昵称、头像或主页入口。
+
+### 并发匹配
+
+Redis 保存等待队列、心跳和短期匹配状态，数据库保存房间、参与者、屏蔽关系及最近匹配记录。固定锁顺序与原子状态变更用于避免重复入队、多房间和并发重复匹配。
+
+### 消息一致性
+
+消息表对 `(room_id, sender_id, client_message_id)` 建立唯一约束。HTTP 与 WebSocket 均调用统一保存服务，客户端断线重试不会重复入库。临时状态和离线推送缓存在 Redis，持久消息落入 PostgreSQL。
+
+### 认证与管理后台
+
+- 用户使用 access/refresh 双 Token、`jti` 会话记录和 refresh rotation；封禁、改密或注销可撤销全部会话。
+- Flutter Token 保存于系统安全存储，不写入 SharedPreferences。
+- WebSocket 使用短期一次性 Ticket，不把完整 JWT 放进 URL。
+- 管理员独立建表，密码哈希存储，支持 RBAC、失败锁定、服务端会话撤销和操作审计。
+- 管理端通过 HttpOnly、Secure、SameSite Cookie 鉴权，不在 localStorage 保存 Token。
+
+### 数据与媒体安全
+
+聊天和纸飞机正文使用带密钥版本的 AES-GCM 密文。公开头像与私密媒体分目录存储；私聊图片、语音、视频及受限动态通过权限检查后的短期签名地址访问。生产日志不得记录邮箱、手机号、正文或凭据。
+
+## 数据库迁移
+
+迁移位于 `backend/alembic/versions/`，当前版本：
+
+```text
+0001_initial → ... → 0014_temporary_password
+```
+
+主要演进包括邮箱认证、社交关系、匿名匹配、全局拉黑、消息幂等、管理员与用户会话、私密媒体、审核证据和临时密码。
+
+## 本地开发
+
+准备 `backend/.env`：
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+启动完整依赖：
 
 ```powershell
 cd backend
@@ -32,67 +113,58 @@ docker compose ps
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-本地入口：
+入口：
 
-- 产品页：<http://127.0.0.1:8000/>
 - 管理端：<http://127.0.0.1:8000/admin>
-- API 文档：<http://127.0.0.1:8000/docs>
+- OpenAPI：<http://127.0.0.1:8000/docs>
+- 健康检查：<http://127.0.0.1:8000/health>
 
-迁移容器成功退出后，API 和 Worker 才会启动。现有 PostgreSQL 数据卷不会在正常重建中删除。
+根路径 `/` 会重定向到管理端。首次管理员通过 `backend/scripts/create_admin.py` 创建，禁止在生产环境保留默认密码。
 
-## 邮箱验证码
-
-双击 `configure-email.cmd` 配置官方发件邮箱。脚本只把 SMTP 设置写入本机 `backend/.env`。SMTP 授权码通常不是邮箱网页登录密码，不要把它发送到聊天、提交到源码或写入 APK。
-
-## 公网访问
-
-`start-public-tunnel.cmd` 可启动临时 Cloudflare Quick Tunnel，但临时地址在 Tunnel 重建后可能变化。要让已安装 APK 长期使用同一个地址，需要在 Cloudflare 创建 Named Tunnel 和固定域名，再运行 `configure-stable-tunnel.cmd`。Tunnel token 和域名属于部署者账户，不能预置进源码或 APK。
-
-生产覆盖文件为 `backend/docker-compose.prod.yml`。生产模式会关闭开发验证码和社区模拟，要求显式提供 JWT、加密、盐及管理员强凭据。PostgreSQL、Redis 和 API 的宿主端口均只绑定 `127.0.0.1`，Cloudflare 在 Compose 私有网络中访问 API。
-
-当前 WebSocket 连接表保存在 API 进程内，因此受支持的部署拓扑是一个 API 容器、一个 Uvicorn Worker。扩展到多实例前需接入 Redis Pub/Sub。
-
-## 开发与测试
+## 测试
 
 ```powershell
 cd backend
 python -m pytest -q
 
-cd ..\mobile
+cd ../mobile
 flutter analyze
 flutter test
 ```
 
-pytest 在导入应用前强制切换到独立的临时 SQLite；如果 `DATABASE_URL` 不是 SQLite 或数据库名不以 `_test` 结尾，测试会立即拒绝运行，避免误删开发数据。
+pytest 会在导入应用前强制使用独立 SQLite 或名称以 `_test` 结尾的数据库；检测到开发/生产数据库时立即拒绝运行。
 
-数据库当前迁移版本为 `0014_temporary_password`。公开头像由 `uploads_data` 持久化；私聊图片、语音、视频和受限动态媒体由 `private_media_data` 持久化，并通过鉴权后的短期签名地址访问。
+## 生产部署
 
-消息页使用 `/api/overview/messages` 一次取得会话、互动通知和好友申请；公开主页资料与动态并行加载，主要列表查询采用批量加载并启用 GZip 响应压缩。
+生产环境必须同时加载基础 Compose 和生产覆盖：
 
-正式 APK 使用构建时固定的 API 地址，不在登录页或设置页暴露部署地址。只有显式使用 `--dart-define=ALLOW_BACKEND_OVERRIDE=true` 的开发构建才允许切换地址。
+```bash
+cd backend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T api alembic upgrade head
+```
 
-## APK 构建
+生产配置会拒绝默认 JWT、加密密钥、固定验证码和自动手机号注册。社区互动 Worker 由 `COMMUNITY_SIMULATION_ENABLED` 显式控制；公开部署前应根据平台规范决定是否启用并向用户披露自动化账号。
+
+详细部署和安全边界见 [docs/production-deployment.md](docs/production-deployment.md) 与 [SECURITY.md](SECURITY.md)。
+
+## Flutter 构建
 
 ```powershell
 cd mobile
 flutter build apk --release --target-platform android-arm64 --split-per-abi `
-  --dart-define=API_BASE_URL=https://你的固定域名
+  --dart-define=API_BASE_URL=https://api.example.com `
+  --dart-define=API_DISCOVERY_URL=https://example.com/endpoint.json
 ```
 
-交付 APK 使用测试签名，仅适合侧载验收。正式上架前必须创建并安全备份自己的 release keystore。
+仓库中的 Android 配置可直接构建；`mobile/android/local.properties` 属于机器文件，不提交。正式发布前需配置并安全保存自己的 release keystore。
 
 ## 已知限制
 
-- APP 进程被系统彻底杀死后仍要接收远程通知，需要 FCM 或手机厂商推送及其云端凭据；当前本地通知覆盖 APP 运行期间。
-- Quick Tunnel 不是稳定生产地址；固定直连需要 Named Tunnel/域名。
-- WebSocket 暂限单 API 实例和单 Worker。
+- WebSocket 连接表仍在 API 进程内存中，当前生产拓扑限制为一个 API 容器、一个 Uvicorn Worker；横向扩展需要 Redis Pub/Sub。
+- APP 被系统彻底终止后的远程通知需要 FCM 或手机厂商推送服务。
+- Cloudflare Quick Tunnel 地址会变化；当前客户端通过外部端点发现文件获取最新地址。正式发布建议改用 Named Tunnel 和自有域名。
 
-## 目录
+## License
 
-```text
-backend/  FastAPI、迁移、Worker、管理端、测试与 Docker Compose
-mobile/   Flutter Android 客户端
-docs/     架构和补充说明
-```
-
-生产部署、安全边界和首次管理员创建见 [docs/production-deployment.md](docs/production-deployment.md) 与 [SECURITY.md](SECURITY.md)。仓库不包含 `.env`、数据库、用户上传内容、签名密钥或 APK。
+[MIT](LICENSE)

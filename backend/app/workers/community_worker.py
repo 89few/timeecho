@@ -29,7 +29,7 @@ COMMENTS = (
 
 
 async def engage_once() -> dict:
-    if settings.app_env != "dev" or not settings.community_simulation_enabled:
+    if not settings.community_simulation_enabled:
         return {"action": "disabled"}
     rng = random.SystemRandom()
     async with AsyncSessionLocal() as db:

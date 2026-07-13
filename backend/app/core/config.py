@@ -68,7 +68,6 @@ class Settings(BaseSettings):
             "ENCRYPTION_SECRET": self.encryption_secret.startswith("change-this")
             or self.encryption_secret.startswith("local-dev"),
             "EMAIL_DEV_CODE_ENABLED": self.email_dev_code_enabled,
-            "COMMUNITY_SIMULATION_ENABLED": self.community_simulation_enabled,
             "PHONE_AUTO_REGISTRATION_ENABLED": self.phone_auto_registration_enabled,
         }
         invalid = [name for name, failed in insecure.items() if failed]

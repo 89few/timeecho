@@ -12,7 +12,7 @@ x-production-environment: &production-environment
   DEV_EMAIL_CODE: ""
   EMAIL_VERIFICATION_REQUIRED: "true"
   EMAIL_ALLOW_UNVERIFIED_REGISTRATION: "false"
-  COMMUNITY_SIMULATION_ENABLED: "false"
+  COMMUNITY_SIMULATION_ENABLED: "true"
   RATE_LIMITS_ENABLED: "true"
 
 services:
@@ -39,5 +39,4 @@ services:
   worker-dormant:
     environment: *production-environment
   worker-community:
-    profiles: ["development-only"]
     environment: *production-environment

@@ -22,7 +22,10 @@ async function call(path, options = {}) {
     headers: {'Content-Type':'application/json', ...(options.headers||{})}
   });
   const json = await response.json().catch(() => ({}));
-  if (response.status === 401 && path !== '/login') { location.reload(); throw new Error('登录已失效'); }
+  if (response.status === 401 && path !== '/login') {
+    showLogin(path === '/me' ? '' : '登录已失效，请重新登录');
+    throw new Error('登录已失效');
+  }
   if (!response.ok || json.success === false) throw new Error(json.message || '请求失败');
   return json.data;
 }
@@ -154,6 +157,7 @@ document.addEventListener('click',(event)=>{
 document.querySelectorAll('[data-tab]').forEach((node)=>node.onclick=()=>render(node.dataset.tab));
 $('#adminLoginBtn').onclick=async()=>{try{await call('/login',{method:'POST',body:JSON.stringify({username:$('#adminUser').value,password:$('#adminPass').value})});showAdmin();}catch(error){$('#adminLoginMsg').innerHTML=`<div class="notice error">${esc(error.message)}</div>`;}};
 $('#adminPass').addEventListener('keydown',(event)=>{if(event.key==='Enter')$('#adminLoginBtn').click();});
-$('#adminLogout').onclick=async()=>{try{await call('/logout',{method:'POST'});}finally{location.reload();}};
+$('#adminLogout').onclick=async()=>{try{await call('/logout',{method:'POST'});}finally{showLogin();}};
 function showAdmin(){$('#adminLogin').classList.add('hidden');$('#adminWork').classList.remove('hidden');render('dashboard');}
+function showLogin(message=''){$('#adminWork').classList.add('hidden');$('#adminLogin').classList.remove('hidden');$('#adminLoginMsg').innerHTML=message?`<div class="notice error">${esc(message)}</div>`:'';}
 call('/me').then(showAdmin).catch(()=>{});

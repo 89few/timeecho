@@ -44,7 +44,8 @@ mobile/android/key.properties
 *.7z
 *.tar
 *.gz
-*.xml
+# Local UI-automation dumps (do not ignore Android XML resources).
+/*.xml
 admin-rendered.html
 docs/screenshots/
 docs/DELIVERY-*.md

@@ -4,7 +4,7 @@ import secrets
 
 from fastapi import APIRouter, Depends
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, get_redis, oauth2_scheme
@@ -68,7 +68,21 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db), redis
 
 
 @router.post("/email/send-code")
-async def send_email_verification_code(payload: EmailCodeRequest, redis: Redis = Depends(get_redis)):
+async def send_email_verification_code(
+    payload: EmailCodeRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    normalized_email = str(payload.email).strip().lower()
+    user_exists = bool(
+        await db.scalar(
+            select(User.id).where(func.lower(User.email) == normalized_email)
+        )
+    )
+    if payload.purpose == "register" and user_exists:
+        raise AppException("EMAIL_ALREADY_REGISTERED", "该邮箱已注册", 409)
+    if payload.purpose == "reset" and not user_exists:
+        raise AppException("ACCOUNT_NOT_FOUND", "该邮箱尚未注册", 404)
     dev_code = await send_email_code(redis, str(payload.email), payload.purpose)
     data = {"expires_in": settings.email_code_expire_minutes * 60}
     if dev_code:
